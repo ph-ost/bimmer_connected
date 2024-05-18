@@ -9,8 +9,10 @@ from bimmer_connected.const import (
     ATTR_ATTRIBUTES,
     ATTR_CAPABILITIES,
     ATTR_CHARGING_SETTINGS,
+    ATTR_CHARGING_SESSiONS,
     ATTR_STATE,
     VEHICLE_CHARGING_DETAILS_URL,
+    VEHICLE_CHARGING_SESSIONS_URL,
     VEHICLE_IMAGE_URL,
     VEHICLE_STATE_URL,
     CarBrands,
@@ -135,7 +137,23 @@ class MyBMWVehicle:
                 )
                 charging_settings = {ATTR_CHARGING_SETTINGS: charging_settings_response.json()}
 
-            self.update_state([vehicle_state, charging_settings], fetched_at)
+            # Get charging sessions
+            if self.is_charging_plan_supported or self.is_charging_settings_supported:
+                charging_sessions_response = await client.get(
+                    VEHICLE_CHARGING_SESSIONS_URL,
+                    params={
+                        "maxResults": "10",
+                        "include_date_picker": "true"
+                    },
+                    headers={
+                        **client.generate_default_header(self.brand),
+                        "bmw-current-date": fetched_at.isoformat(),
+                        "bmw-vin": self.vin,
+                    },
+                )
+                charging_sessions = {ATTR_CHARGING_SESSiONS: charging_sessions_response.json()}
+
+            self.update_state([vehicle_state, charging_settings, charging_sessions], fetched_at)
 
     def update_state(
         self,
@@ -177,6 +195,7 @@ class MyBMWVehicle:
             ATTR_CAPABILITIES: {},
             ATTR_STATE: {},
             ATTR_CHARGING_SETTINGS: {},
+            ATTR_CHARGING_SESSiONS: {},
             **self.data,
         }
 
